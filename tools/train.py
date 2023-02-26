@@ -12,7 +12,7 @@ from mmengine.logging import print_log
 from mmengine.runner import Runner
 
 from mmyolo.registry import RUNNERS
-from mmyolo.utils import register_all_modules
+from mmyolo.utils import is_metainfo_lower, register_all_modules
 
 import torch
 torch.backends.cuda.matmul.allow_tf32 = False
@@ -106,6 +106,9 @@ def main():
     elif args.resume is not None:
         cfg.resume = True
         cfg.load_from = args.resume
+
+    # Determine whether the custom metainfo fields are all lowercase
+    is_metainfo_lower(cfg)
 
     # build the runner from config
     if 'runner_type' not in cfg:

@@ -35,8 +35,11 @@ from typing import Tuple
 
 import numpy as np
 import torch
+<<<<<<< HEAD
 from mmyolo.registry import DATASETS
 #from mmdet.datasets import build_dataset
+=======
+>>>>>>> origin/dev
 from mmdet.structures.bbox import (bbox_cxcywh_to_xyxy, bbox_overlaps,
                                    bbox_xyxy_to_cxcywh)
 from mmdet.utils import replace_cfg_vals, update_data_root
@@ -47,6 +50,7 @@ from mmengine.utils import ProgressBar
 from scipy.optimize import differential_evolution
 from torch import Tensor
 
+from mmyolo.registry import DATASETS
 from mmyolo.utils import register_all_modules
 
 try:
@@ -604,7 +608,10 @@ def main():
     while 'dataset' in train_data_cfg:
         train_data_cfg = train_data_cfg['dataset']
     dataset = DATASETS.build(train_data_cfg)
+<<<<<<< HEAD
     # dataset = build_dataset(train_data_cfg)
+=======
+>>>>>>> origin/dev
 
     if args.algorithm == 'k-means':
         optimizer = YOLOKMeansAnchorOptimizer(
