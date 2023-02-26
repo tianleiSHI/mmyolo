@@ -1,4 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import os 
+os.environ['CUDA_VISIBLE_DEVICES']='1' 
+
 import argparse
 import logging
 import os
@@ -11,6 +14,11 @@ from mmengine.runner import Runner
 from mmyolo.registry import RUNNERS
 from mmyolo.utils import register_all_modules
 
+import torch
+torch.backends.cuda.matmul.allow_tf32 = False
+torch.backends.cudnn.benchmark = True
+torch.backends.cudnn.deterministic = False
+torch.backends.cudnn.allow_tf32 = True
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a detector')

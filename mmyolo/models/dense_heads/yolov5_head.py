@@ -25,8 +25,7 @@ def get_prior_xy_info(index: int, num_base_priors: int,
                       featmap_sizes: int) -> Tuple[int, int, int]:
     """Get prior index and xy index in feature map by flatten index."""
     _, featmap_w = featmap_sizes
-    priors = index % num_base_priors
-    xy_index = index // num_base_priors
+    xy_index, priors = divmod(index, num_base_priors)
     grid_y = xy_index // featmap_w
     grid_x = xy_index % featmap_w
     return priors, grid_x, grid_y
@@ -152,40 +151,29 @@ class YOLOv5Head(BaseDenseHead):
             Defaults to None.
     """
 
-    def __init__(self,
-                 head_module: ConfigType,
-                 prior_generator: ConfigType = dict(
+    def __init__(self, head_module: ConfigType, prior_generator: ConfigType = dict(
                      type='mmdet.YOLOAnchorGenerator',
                      base_sizes=[[(10, 13), (16, 30), (33, 23)],
                                  [(30, 61), (62, 45), (59, 119)],
                                  [(116, 90), (156, 198), (373, 326)]],
-                     strides=[8, 16, 32]),
-                 bbox_coder: ConfigType = dict(type='YOLOv5BBoxCoder'),
-                 loss_cls: ConfigType = dict(
+                     strides=[8, 16, 32]), bbox_coder: ConfigType = dict(type='YOLOv5BBoxCoder'), loss_cls: ConfigType = dict(
                      type='mmdet.CrossEntropyLoss',
                      use_sigmoid=True,
                      reduction='mean',
-                     loss_weight=0.5),
-                 loss_bbox: ConfigType = dict(
+                     loss_weight=0.5), loss_bbox: ConfigType = dict(
                      type='IoULoss',
                      iou_mode='ciou',
                      bbox_format='xywh',
                      eps=1e-7,
                      reduction='mean',
                      loss_weight=0.05,
-                     return_iou=True),
-                 loss_obj: ConfigType = dict(
+                     return_iou=True), loss_obj: ConfigType = dict(
                      type='mmdet.CrossEntropyLoss',
                      use_sigmoid=True,
                      reduction='mean',
-                     loss_weight=1.0),
-                 prior_match_thr: float = 4.0,
-                 near_neighbor_thr: float = 0.5,
-                 ignore_iof_thr: float = -1.0,
-                 obj_level_weights: List[float] = [4.0, 1.0, 0.4],
-                 train_cfg: OptConfigType = None,
-                 test_cfg: OptConfigType = None,
-                 init_cfg: OptMultiConfig = None):
+                     loss_weight=1.0), prior_match_thr: float = 4.0, near_neighbor_thr: float = 0.5, ignore_iof_thr: float = -1.0, obj_level_weights: List[float] = None, train_cfg: OptConfigType = None, test_cfg: OptConfigType = None, init_cfg: OptMultiConfig = None):
+        if obj_level_weights is None:
+            obj_level_weights = [4.0, 1.0, 0.4]
         super().__init__(init_cfg=init_cfg)
 
         self.head_module = MODELS.build(head_module)
@@ -276,6 +264,7 @@ class YOLOv5Head(BaseDenseHead):
                         cfg: Optional[ConfigDict] = None,
                         rescale: bool = True,
                         with_nms: bool = True) -> List[InstanceData]:
+        # sourcery skip: low-code-quality
         """Transform a batch of output features extracted by the head into
         bbox results.
         Args:
@@ -373,11 +362,7 @@ class YOLOv5Head(BaseDenseHead):
                               flatten_objectness, batch_img_metas):
             ori_shape = img_meta['ori_shape']
             scale_factor = img_meta['scale_factor']
-            if 'pad_param' in img_meta:
-                pad_param = img_meta['pad_param']
-            else:
-                pad_param = None
-
+            pad_param = img_meta['pad_param'] if 'pad_param' in img_meta else None
             score_thr = cfg.get('score_thr', -1)
             # yolox_style does not require the following operations
             if objectness is not None and score_thr > 0 and not cfg.get(
@@ -400,7 +385,7 @@ class YOLOv5Head(BaseDenseHead):
                 continue
 
             nms_pre = cfg.get('nms_pre', 100000)
-            if cfg.multi_label is False:
+            if not cfg.multi_label:
                 scores, labels = scores.max(1, keepdim=True)
                 scores, _, keep_idxs, results = filter_scores_and_topk(
                     scores,
@@ -456,15 +441,12 @@ class YOLOv5Head(BaseDenseHead):
         """
 
         if isinstance(batch_data_samples, list):
-            losses = super().loss(x, batch_data_samples)
-        else:
-            outs = self(x)
-            # Fast version
-            loss_inputs = outs + (batch_data_samples['bboxes_labels'],
-                                  batch_data_samples['img_metas'])
-            losses = self.loss_by_feat(*loss_inputs)
-
-        return losses
+            return super().loss(x, batch_data_samples)
+        outs = self(x)
+        # Fast version
+        loss_inputs = outs + (batch_data_samples['bboxes_labels'],
+                              batch_data_samples['img_metas'])
+        return self.loss_by_feat(*loss_inputs)
 
     def loss_by_feat(
             self,
@@ -474,6 +456,7 @@ class YOLOv5Head(BaseDenseHead):
             batch_gt_instances: Sequence[InstanceData],
             batch_img_metas: Sequence[dict],
             batch_gt_instances_ignore: OptInstanceList = None) -> dict:
+        # sourcery skip: low-code-quality
         """Calculate the loss based on the features extracted by the detection
         head.
 
